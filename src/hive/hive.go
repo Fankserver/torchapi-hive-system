@@ -3,12 +3,15 @@ package hive
 import (
 	"encoding/json"
 	"net/http"
-
-	"github.com/fankserver/torchapi-hive-system/src/model"
 )
 
+type Hive struct {
+	ID   int    `json:"id" bson:"id"`
+	Name string `json:"name" bson:"name"`
+}
+
 func CreateHive(w http.ResponseWriter, r *http.Request) {
-	var h model.Hive
+	var h Hive
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&h); err != nil {
