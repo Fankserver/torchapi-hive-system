@@ -21,7 +21,7 @@ var (
 	dbHosts = flag.String("dbhost", "", "mongodb hosts comma separated")
 	dbName = flag.String("dbname", "", "mongodb database")
 	dbUser = flag.String("dbuser", "", "mongodb username")
-	dbPass = flag.String("host", "", "mongodb password")
+	dbPass = flag.String("dbpass", "", "mongodb password")
 )
 
 func main() {
