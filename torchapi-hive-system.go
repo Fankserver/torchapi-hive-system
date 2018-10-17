@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	"github.com/fankserver/torchapi-hive-system/src/hive"
@@ -15,8 +17,17 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var (
+	dbHosts = flag.String("dbhost", "", "mongodb hosts comma separated")
+	dbName = flag.String("dbname", "", "mongodb database")
+	dbUser = flag.String("dbuser", "", "mongodb username")
+	dbPass = flag.String("host", "", "mongodb password")
+)
+
 func main() {
-	system, err := hive.NewSystem([]string{}, "", "", "")
+	flag.Parse()
+
+	system, err := hive.NewSystem(strings.Split(*dbHosts, ","), *dbName, *dbUser, *dbPass)
 	if err != nil {
 		logrus.Fatalln(err.Error())
 	}
