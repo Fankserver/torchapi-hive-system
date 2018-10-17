@@ -33,7 +33,7 @@ type Sector struct {
 	LastCurrencySync *time.Time `json:"last_currency_sync" bson:"last_currency_sync"`
 }
 
-func (s *system) CreateSector(w http.ResponseWriter, r *http.Request) {
+func (s *System) CreateSector(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	var hs Sector
@@ -56,7 +56,7 @@ func (s *system) CreateSector(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *system) GetSectors(w http.ResponseWriter, r *http.Request) {
+func (s *System) GetSectors(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	conn := s.db.Copy()
@@ -75,7 +75,39 @@ func (s *system) GetSectors(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *system) DeleteSector(w http.ResponseWriter, r *http.Request) {
+func (s *System) IsSectorValid(hiveID bson.ObjectId, sectorID bson.ObjectId) (bool, error) {
+	conn := s.db.Copy()
+	defer conn.Close()
+
+	count, err := conn.DB("torchhive").C("sector").Find(bson.M{
+		"_id":     sectorID,
+		"hive_id": hiveID,
+	}).Count()
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
+func (s *System) UpdateSectorState(hiveID bson.ObjectId, sectorID bson.ObjectId, state SectorState) error {
+	conn := s.db.Copy()
+	defer conn.Close()
+
+	return conn.DB("torchhive").C("sector").Update(
+		bson.M{
+			"_id":     sectorID,
+			"hive_id": hiveID,
+		},
+		bson.M{
+			"$set": bson.M{
+				"state": state,
+			},
+		},
+	)
+}
+
+func (s *System) DeleteSector(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	conn := s.db.Copy()

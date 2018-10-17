@@ -6,11 +6,11 @@ import (
 	"github.com/globalsign/mgo"
 )
 
-type system struct {
+type System struct {
 	db *mgo.Session
 }
 
-func NewSystem(MongoDBHosts []string, AuthDatabase, AuthUserName, AuthPassword string) (*system, error) {
+func NewSystem(MongoDBHosts []string, AuthDatabase, AuthUserName, AuthPassword string) (*System, error) {
 	mongoDBDialInfo := &mgo.DialInfo{
 		Addrs:    MongoDBHosts,
 		Timeout:  60 * time.Second,
@@ -24,7 +24,7 @@ func NewSystem(MongoDBHosts []string, AuthDatabase, AuthUserName, AuthPassword s
 		return nil, err
 	}
 
-	return &system{
+	return &System{
 		db: mongoSession,
 	}, nil
 }

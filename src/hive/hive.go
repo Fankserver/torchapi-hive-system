@@ -12,7 +12,7 @@ type Hive struct {
 	Name string        `json:"name" bson:"name"`
 }
 
-func (s *system) CreateHive(w http.ResponseWriter, r *http.Request) {
+func (s *System) CreateHive(w http.ResponseWriter, r *http.Request) {
 	var h Hive
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
@@ -31,7 +31,7 @@ func (s *system) CreateHive(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *system) GetHives(w http.ResponseWriter, r *http.Request) {
+func (s *System) GetHives(w http.ResponseWriter, r *http.Request) {
 	conn := s.db.Copy()
 	defer conn.Close()
 
