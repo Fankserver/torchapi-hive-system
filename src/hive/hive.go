@@ -3,14 +3,16 @@ package hive
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/globalsign/mgo/bson"
 )
 
 type Hive struct {
-	ID   int    `json:"id" bson:"id"`
-	Name string `json:"name" bson:"name"`
+	ID   bson.ObjectId `json:"id" bson:"_id,omitempty"`
+	Name string        `json:"name" bson:"name"`
 }
 
-func CreateHive(w http.ResponseWriter, r *http.Request) {
+func (s *system) CreateHive(w http.ResponseWriter, r *http.Request) {
 	var h Hive
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
@@ -19,4 +21,29 @@ func CreateHive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	conn := s.db.Copy()
+	defer conn.Close()
+
+	err := conn.DB("torchhive").C("hive").Insert(h)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (s *system) GetHives(w http.ResponseWriter, r *http.Request) {
+	conn := s.db.Copy()
+	defer conn.Close()
+
+	var h []Hive
+	err := conn.DB("torchhive").C("hive").Find(nil).All(&h)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(h); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }

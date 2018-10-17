@@ -24,7 +24,7 @@ func NewSystem(MongoDBHosts []string, AuthDatabase, AuthUserName, AuthPassword s
 		return nil, err
 	}
 
-	return system{
+	return &system{
 		db: mongoSession,
 	}, nil
 }
