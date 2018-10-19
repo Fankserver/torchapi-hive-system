@@ -72,6 +72,9 @@ func (c *Client) readPump() {
 		}
 
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
+		if len(message) <= len("SESSION:Unloading") {
+			continue
+		}
 
 		broadcast, sectorEvents, err := c.hub.system.ProcessSectorEvent(c.hiveID, c.sectorID, message)
 		if err != nil {
