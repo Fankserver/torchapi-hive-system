@@ -43,7 +43,7 @@ func (s *System) ProcessSectorEvent(hiveID bson.ObjectId, sectorID bson.ObjectId
 	}
 
 	logrus.Info(event.Type)
-	logrus.Info(event.Raw)
+	logrus.Info(string(event.Raw))
 
 	switch event.Type {
 	case EventTypeServerStateChange:
