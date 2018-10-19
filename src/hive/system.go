@@ -35,7 +35,7 @@ type EventSectorChange struct {
 	Raw  json.RawMessage `json:"raw"`
 }
 
-func (s *System) ProcessSectorEvent(hiveID bson.ObjectId, sectorID bson.ObjectId, data []byte) (broadcast bool, err error) {
+func (s *System) ProcessSectorEvent(hiveID bson.ObjectId, sectorID bson.ObjectId, data []byte) (broadcast bool, sectorEvents map[bson.ObjectId][]byte, err error) {
 	var event EventSectorChange
 	err = json.Unmarshal(data, &event)
 	if err != nil {
@@ -66,6 +66,72 @@ func (s *System) ProcessSectorEvent(hiveID bson.ObjectId, sectorID bson.ObjectId
 		err = s.AddFactionSector(hiveID, sectorID, factionCreatedComplete)
 		if err != nil {
 			return
+		}
+	case EventTypeFactionEdited:
+		var factionEdited EventFactionEdited
+		err = json.Unmarshal(event.Raw, &factionEdited)
+		if err != nil {
+			return
+		}
+
+		err = s.EditFaction(hiveID, sectorID, factionEdited)
+		if err != nil {
+			return
+		}
+
+		sectorEvents = make(map[bson.ObjectId][]byte)
+
+		var faction *Faction
+		faction, err = s.GetFaction(hiveID, sectorID, factionEdited.FactionID)
+		if err != nil {
+			return
+		}
+		for _, v := range faction.Sectors {
+			// ignore own sector
+			if v.SectorID == sectorID {
+				continue
+			}
+
+			factionEdited.FactionID = v.FactionID
+			var data []byte
+			data, err = json.Marshal(factionEdited)
+			if err != nil {
+				return
+			}
+			sectorEvents[v.SectorID] = data
+		}
+	case EventTypeFactionAutoAcceptChanged:
+		var factionAutoAcceptChange EventFactionAutoAcceptChangeEvent
+		err = json.Unmarshal(event.Raw, &factionAutoAcceptChange)
+		if err != nil {
+			return
+		}
+
+		err = s.ChangeAutoAccept(hiveID, sectorID, factionAutoAcceptChange)
+		if err != nil {
+			return
+		}
+
+		sectorEvents = make(map[bson.ObjectId][]byte)
+
+		var faction *Faction
+		faction, err = s.GetFaction(hiveID, sectorID, factionAutoAcceptChange.FactionID)
+		if err != nil {
+			return
+		}
+		for _, v := range faction.Sectors {
+			// ignore own sector
+			if v.SectorID == sectorID {
+				continue
+			}
+
+			factionAutoAcceptChange.FactionID = v.FactionID
+			var data []byte
+			data, err = json.Marshal(factionAutoAcceptChange)
+			if err != nil {
+				return
+			}
+			sectorEvents[v.SectorID] = data
 		}
 	default:
 		logrus.Warnln("received unknown event type", event.Type)

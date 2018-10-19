@@ -73,19 +73,28 @@ func (c *Client) readPump() {
 
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
 
-		broadcast, err := c.hub.system.ProcessSectorEvent(c.hiveID, c.sectorID, message)
+		broadcast, sectorEvents, err := c.hub.system.ProcessSectorEvent(c.hiveID, c.sectorID, message)
 		if err != nil {
 			logrus.Fatalln(err.Error())
 			return
 		}
 
-		if !broadcast {
-			continue
-		}
+		if broadcast {
+			c.hub.broadcast <- hubBroadcastMessage{
+				Message: message,
+				Client:  c,
+			}
+		} else if sectorEvents != nil {
+			for k, v := range sectorEvents {
+				for client := range c.hub.clients {
+					if client.hiveID != c.hiveID || client.sectorID != k {
+						continue
+					}
 
-		c.hub.broadcast <- hubBroadcastMessage{
-			Message: message,
-			Client:  c,
+					client.send <- v
+					break
+				}
+			}
 		}
 	}
 }

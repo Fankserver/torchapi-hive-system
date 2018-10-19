@@ -1,8 +1,10 @@
 package hive
 
 const (
-	EventTypeFactionCreated         = "factionCreated"
-	EventTypeFactionCreatedComplete = "factionCreatedComplete"
+	EventTypeFactionCreated           = "factionCreated"
+	EventTypeFactionCreatedComplete   = "factionCreatedComplete"
+	EventTypeFactionEdited            = "factionEdited"
+	EventTypeFactionAutoAcceptChanged = "factionAutoAcceptChanged"
 )
 
 type EventFactionCreated struct {
@@ -20,4 +22,18 @@ type EventFactionCreated struct {
 type EventFactionCreatedComplete struct {
 	FactionID int64 `json:"FactionId"`
 	Tag       string
+}
+
+type EventFactionEdited struct {
+	FactionID   int64 `json:"FactionId"`
+	Tag         string
+	Name        string
+	Description string
+	PrivateInfo string
+}
+
+type EventFactionAutoAcceptChangeEvent struct {
+	FactionID        int64 `json:"FactionId"`
+	AutoAcceptMember bool
+	AutoAcceptPeace  bool
 }

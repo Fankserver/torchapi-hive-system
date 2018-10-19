@@ -16,15 +16,17 @@ type FactionSector struct {
 }
 
 type Faction struct {
-	ID             bson.ObjectId   `json:"id" bson:"_id,omitempty"`
-	HiveID         bson.ObjectId   `json:"-" bson:"hive_id"`
-	Tag            string          `json:"tag" bson:"tag"`
-	Name           string          `json:"name" bson:"name"`
-	Description    string          `json:"description" bson:"description"`
-	PrivateInfo    string          `json:"private_info" bson:"private_info"`
-	AcceptHumans   bool            `json:"accept_humans" bson:"accept_humans"`
-	FounderSteamID uint64          `json:"founder_steam_id" bson:"founder_steam_id"`
-	Sectors        []FactionSector `json:"sectors" bson:"sectors"`
+	ID               bson.ObjectId   `json:"id" bson:"_id,omitempty"`
+	HiveID           bson.ObjectId   `json:"-" bson:"hive_id"`
+	Tag              string          `json:"tag" bson:"tag"`
+	Name             string          `json:"name" bson:"name"`
+	Description      string          `json:"description" bson:"description"`
+	PrivateInfo      string          `json:"private_info" bson:"private_info"`
+	AcceptHumans     bool            `json:"accept_humans" bson:"accept_humans"`
+	FounderSteamID   uint64          `json:"founder_steam_id" bson:"founder_steam_id"`
+	AutoAcceptMember bool            `json:"auto_accept_member" bson:"auto_accept_member"`
+	AutoAcceptPeace  bool            `json:"auto_accept_peace" bson:"auto_accept_peace"`
+	Sectors          []FactionSector `json:"sectors" bson:"sectors"`
 }
 
 func (s *System) GetFactions(w http.ResponseWriter, r *http.Request) {
@@ -52,7 +54,7 @@ func (s *System) CreateFaction(hiveID bson.ObjectId, sectorID bson.ObjectId, eve
 	conn := s.db.Copy()
 	defer conn.Close()
 
-	err := conn.DB("torchhive").C(CollectionFaction).Insert(Faction{
+	return conn.DB("torchhive").C(CollectionFaction).Insert(Faction{
 		HiveID:       hiveID,
 		Name:         event.Name,
 		Tag:          event.Tag,
@@ -66,18 +68,13 @@ func (s *System) CreateFaction(hiveID bson.ObjectId, sectorID bson.ObjectId, eve
 			},
 		},
 	})
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (s *System) AddFactionSector(hiveID bson.ObjectId, sectorID bson.ObjectId, event EventFactionCreatedComplete) error {
 	conn := s.db.Copy()
 	defer conn.Close()
 
-	err := conn.DB("torchhive").C(CollectionFaction).Update(
+	return conn.DB("torchhive").C(CollectionFaction).Update(
 		bson.M{
 			"hive_id": hiveID,
 			"tag":     event.Tag,
@@ -91,9 +88,73 @@ func (s *System) AddFactionSector(hiveID bson.ObjectId, sectorID bson.ObjectId, 
 			},
 		},
 	)
+}
+
+func (s *System) GetFaction(hiveID bson.ObjectId, sectorID bson.ObjectId, factionID int64) (*Faction, error) {
+	conn := s.db.Copy()
+	defer conn.Close()
+
+	var faction Faction
+	err := conn.DB("torchhive").C(CollectionFaction).Find(bson.M{
+		"hive_id": hiveID,
+		"sectors": bson.M{
+			"$elemMatch": bson.M{
+				"sector_id":  sectorID,
+				"faction_id": factionID,
+			},
+		},
+	}).One(&faction)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &faction, nil
+}
+
+func (s *System) EditFaction(hiveID bson.ObjectId, sectorID bson.ObjectId, event EventFactionEdited) error {
+	conn := s.db.Copy()
+	defer conn.Close()
+
+	return conn.DB("torchhive").C(CollectionFaction).Update(
+		bson.M{
+			"hive_id": hiveID,
+			"sectors": bson.M{
+				"$elemMatch": bson.M{
+					"sector_id":  sectorID,
+					"faction_id": event.FactionID,
+				},
+			},
+		},
+		bson.M{
+			"$set": bson.M{
+				"tag":          event.Tag,
+				"name":         event.Name,
+				"description":  event.Description,
+				"private_info": event.PrivateInfo,
+			},
+		},
+	)
+}
+
+func (s *System) ChangeAutoAccept(hiveID bson.ObjectId, sectorID bson.ObjectId, event EventFactionAutoAcceptChangeEvent) error {
+	conn := s.db.Copy()
+	defer conn.Close()
+
+	return conn.DB("torchhive").C(CollectionFaction).Update(
+		bson.M{
+			"hive_id": hiveID,
+			"sectors": bson.M{
+				"$elemMatch": bson.M{
+					"sector_id":  sectorID,
+					"faction_id": event.FactionID,
+				},
+			},
+		},
+		bson.M{
+			"$set": bson.M{
+				"auto_accept_member": event.AutoAcceptMember,
+				"auto_accept_peace":  event.AutoAcceptPeace,
+			},
+		},
+	)
 }
