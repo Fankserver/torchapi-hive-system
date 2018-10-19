@@ -72,15 +72,11 @@ func (c *Client) readPump() {
 		}
 
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		if len(message) <= len("SESSION:Unloading") {
-			logrus.Warn("trash")
-			continue
-		}
 
 		broadcast, sectorEvents, err := c.hub.system.ProcessSectorEvent(c.hiveID, c.sectorID, message)
 		if err != nil {
 			logrus.Fatalln(err.Error())
-			return
+			continue
 		}
 
 		if broadcast {
