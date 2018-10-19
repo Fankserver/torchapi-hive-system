@@ -73,6 +73,7 @@ func (c *Client) readPump() {
 
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
 		if len(message) <= len("SESSION:Unloading") {
+			logrus.Warn("trash")
 			continue
 		}
 
@@ -83,17 +84,27 @@ func (c *Client) readPump() {
 		}
 
 		if broadcast {
-			c.hub.broadcast <- hubBroadcastMessage{
-				Message: message,
-				Client:  c,
+			logrus.Info("broadcast")
+			for client := range c.hub.clients {
+				if client.hiveID != c.hiveID || client.sectorID == c.sectorID {
+					logrus.Info("skip client", c.hiveID.String(), c.sectorID.String())
+					continue
+				}
+
+				logrus.Info("send client", c.hiveID.String(), c.sectorID.String())
+				client.send <- message
+				break
 			}
 		} else if sectorEvents != nil {
+			logrus.Info("select events")
 			for k, v := range sectorEvents {
 				for client := range c.hub.clients {
 					if client.hiveID != c.hiveID || client.sectorID != k {
+						logrus.Info("skip client", c.hiveID.String(), c.sectorID.String())
 						continue
 					}
 
+					logrus.Info("send client", c.hiveID.String(), c.sectorID.String())
 					client.send <- v
 					break
 				}

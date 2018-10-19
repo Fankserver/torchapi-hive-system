@@ -42,7 +42,22 @@ func (s *System) ProcessSectorEvent(hiveID bson.ObjectId, sectorID bson.ObjectId
 		return
 	}
 
+	logrus.Info(event.Type)
+
 	switch event.Type {
+	case EventTypeServerStateChange:
+		var serverStateChanged ServerStateChanged
+		err = json.Unmarshal(event.Raw, &serverStateChanged)
+		if err != nil {
+			return
+		}
+
+		switch serverStateChanged.State {
+		case "Loaded":
+			err = s.UpdateSectorState(hiveID, sectorID, SectorStateOnline)
+		case "Unloading":
+			err = s.UpdateSectorState(hiveID, sectorID, SectorStateOffline)
+		}
 	case EventTypeFactionCreated:
 		broadcast = true
 

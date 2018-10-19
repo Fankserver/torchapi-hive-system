@@ -1,11 +1,16 @@
 package hive
 
 const (
+	EventTypeServerStateChange        = "serverStateChange"
 	EventTypeFactionCreated           = "factionCreated"
 	EventTypeFactionCreatedComplete   = "factionCreatedComplete"
 	EventTypeFactionEdited            = "factionEdited"
 	EventTypeFactionAutoAcceptChanged = "factionAutoAcceptChanged"
 )
+
+type ServerStateChanged struct {
+	State string
+}
 
 type EventFactionCreated struct {
 	FactionID      int64 `json:"FactionId"`
