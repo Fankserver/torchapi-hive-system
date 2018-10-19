@@ -1,7 +1,6 @@
 package notification
 
 import (
-	"bytes"
 	"log"
 	"net/http"
 	"time"
@@ -71,7 +70,7 @@ func (c *Client) readPump() {
 			break
 		}
 
-		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
+		//message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
 
 		broadcast, sectorEvents, err := c.hub.system.ProcessSectorEvent(c.hiveID, c.sectorID, message)
 		if err != nil {
@@ -83,11 +82,11 @@ func (c *Client) readPump() {
 			logrus.Info("broadcast")
 			for client := range c.hub.clients {
 				if client.hiveID != c.hiveID || client.sectorID == c.sectorID {
-					logrus.Info("skip client", c.hiveID.String(), c.sectorID.String())
+					logrus.Info("skip client", c.hiveID.Hex(), c.sectorID.Hex())
 					continue
 				}
 
-				logrus.Info("send client", c.hiveID.String(), c.sectorID.String())
+				logrus.Info("send client", c.hiveID.Hex(), c.sectorID.Hex())
 				client.send <- message
 				break
 			}
@@ -96,11 +95,11 @@ func (c *Client) readPump() {
 			for k, v := range sectorEvents {
 				for client := range c.hub.clients {
 					if client.hiveID != c.hiveID || client.sectorID != k {
-						logrus.Info("skip client", c.hiveID.String(), c.sectorID.String())
+						logrus.Info("skip client", c.hiveID.Hex(), c.sectorID.Hex())
 						continue
 					}
 
-					logrus.Info("send client", c.hiveID.String(), c.sectorID.String())
+					logrus.Info("send client", c.hiveID.Hex(), c.sectorID.Hex())
 					client.send <- v
 					break
 				}

@@ -43,7 +43,7 @@ func (h *Hub) Run() {
 		select {
 		case client := <-h.register:
 			h.clients[client] = true
-			logrus.Info("client registered", client.hiveID.String(), client.sectorID.String())
+			logrus.Info("client registered", client.hiveID.Hex(), client.sectorID.Hex())
 			err := h.system.UpdateSectorState(client.hiveID, client.sectorID, hive.SectorStateBooting)
 			if err != nil {
 				logrus.Errorln(err)
@@ -53,7 +53,7 @@ func (h *Hub) Run() {
 				delete(h.clients, client)
 				close(client.send)
 			}
-			logrus.Info("client unregistered", client.hiveID.String(), client.sectorID.String())
+			logrus.Info("client unregistered", client.hiveID.Hex(), client.sectorID.Hex())
 			err := h.system.UpdateSectorState(client.hiveID, client.sectorID, hive.SectorStateOffline)
 			if err != nil {
 				logrus.Errorln(err)
