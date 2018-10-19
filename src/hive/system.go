@@ -31,8 +31,8 @@ func NewSystem(dbConnectionString string) (*System, error) {
 }
 
 type EventSectorChange struct {
-	Type string          `json:"type"`
-	Raw  json.RawMessage `json:"raw"`
+	Type string `json:"type"`
+	Raw  string `json:"raw"`
 }
 
 func (s *System) ProcessSectorEvent(hiveID bson.ObjectId, sectorID bson.ObjectId, data []byte) (broadcast bool, sectorEvents map[bson.ObjectId][]byte, err error) {
@@ -43,12 +43,12 @@ func (s *System) ProcessSectorEvent(hiveID bson.ObjectId, sectorID bson.ObjectId
 	}
 
 	logrus.Info(event.Type)
-	logrus.Info(string(event.Raw))
+	logrus.Info(event.Raw)
 
 	switch event.Type {
 	case EventTypeServerStateChange:
 		var serverStateChanged ServerStateChanged
-		err = json.Unmarshal(event.Raw, &serverStateChanged)
+		err = json.Unmarshal([]byte(event.Raw), &serverStateChanged)
 		if err != nil {
 			return
 		}
@@ -63,7 +63,7 @@ func (s *System) ProcessSectorEvent(hiveID bson.ObjectId, sectorID bson.ObjectId
 		broadcast = true
 
 		var factionCreated EventFactionCreated
-		err = json.Unmarshal(event.Raw, &factionCreated)
+		err = json.Unmarshal([]byte(event.Raw), &factionCreated)
 		if err != nil {
 			return
 		}
@@ -74,7 +74,7 @@ func (s *System) ProcessSectorEvent(hiveID bson.ObjectId, sectorID bson.ObjectId
 		}
 	case EventTypeFactionCreatedComplete:
 		var factionCreatedComplete EventFactionCreatedComplete
-		err = json.Unmarshal(event.Raw, &factionCreatedComplete)
+		err = json.Unmarshal([]byte(event.Raw), &factionCreatedComplete)
 		if err != nil {
 			return
 		}
@@ -85,7 +85,7 @@ func (s *System) ProcessSectorEvent(hiveID bson.ObjectId, sectorID bson.ObjectId
 		}
 	case EventTypeFactionEdited:
 		var factionEdited EventFactionEdited
-		err = json.Unmarshal(event.Raw, &factionEdited)
+		err = json.Unmarshal([]byte(event.Raw), &factionEdited)
 		if err != nil {
 			return
 		}
@@ -118,7 +118,7 @@ func (s *System) ProcessSectorEvent(hiveID bson.ObjectId, sectorID bson.ObjectId
 		}
 	case EventTypeFactionAutoAcceptChanged:
 		var factionAutoAcceptChange EventFactionAutoAcceptChangeEvent
-		err = json.Unmarshal(event.Raw, &factionAutoAcceptChange)
+		err = json.Unmarshal([]byte(event.Raw), &factionAutoAcceptChange)
 		if err != nil {
 			return
 		}
