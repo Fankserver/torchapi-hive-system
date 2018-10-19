@@ -7,6 +7,8 @@ import (
 	"github.com/globalsign/mgo/bson"
 )
 
+const CollectionHive = "hive"
+
 type Hive struct {
 	ID   bson.ObjectId `json:"id" bson:"_id,omitempty"`
 	Name string        `json:"name" bson:"name"`
@@ -24,7 +26,7 @@ func (s *System) CreateHive(w http.ResponseWriter, r *http.Request) {
 	conn := s.db.Copy()
 	defer conn.Close()
 
-	err := conn.DB("torchhive").C("hive").Insert(h)
+	err := conn.DB("torchhive").C(CollectionHive).Insert(h)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -36,7 +38,7 @@ func (s *System) GetHives(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	var h []Hive
-	err := conn.DB("torchhive").C("hive").Find(nil).All(&h)
+	err := conn.DB("torchhive").C(CollectionHive).Find(nil).All(&h)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

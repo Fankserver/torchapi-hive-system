@@ -8,6 +8,7 @@ import (
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/gorilla/websocket"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -69,8 +70,23 @@ func (c *Client) readPump() {
 			}
 			break
 		}
+
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		c.hub.broadcast <- message
+
+		broadcast, err := c.hub.system.ProcessSectorEvent(c.hiveID, c.sectorID, message)
+		if err != nil {
+			logrus.Fatalln(err.Error())
+			return
+		}
+
+		if !broadcast {
+			continue
+		}
+
+		c.hub.broadcast <- hubBroadcastMessage{
+			Message: message,
+			Client:  c,
+		}
 	}
 }
 

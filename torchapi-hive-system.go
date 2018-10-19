@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"time"
 
 	"github.com/fankserver/torchapi-hive-system/src/hive"
@@ -18,16 +17,13 @@ import (
 )
 
 var (
-	dbHosts = flag.String("dbhost", "", "mongodb hosts comma separated")
-	dbName = flag.String("dbname", "", "mongodb database")
-	dbUser = flag.String("dbuser", "", "mongodb username")
-	dbPass = flag.String("dbpass", "", "mongodb password")
+	dbConnection = flag.String("dbconn", "mongodb://localhost", "mongodb connection string")
 )
 
 func main() {
 	flag.Parse()
 
-	system, err := hive.NewSystem(strings.Split(*dbHosts, ","), *dbName, *dbUser, *dbPass)
+	system, err := hive.NewSystem(*dbConnection)
 	if err != nil {
 		logrus.Fatalln(err.Error())
 	}
@@ -63,6 +59,7 @@ func main() {
 	})
 	router.HandleFunc("/api/hive", system.GetHives).Methods(http.MethodGet)
 	router.HandleFunc("/api/hive", system.CreateHive).Methods(http.MethodPost)
+	router.HandleFunc("/api/hive/{hive_id:[a-z0-9]+}/faction", system.GetFactions).Methods(http.MethodGet)
 	router.HandleFunc("/api/hive/{hive_id:[a-z0-9]+}/sector", system.GetSectors).Methods(http.MethodGet)
 	router.HandleFunc("/api/hive/{hive_id:[a-z0-9]+}/sector", system.CreateSector).Methods(http.MethodPost)
 	router.HandleFunc("/api/hive/{hive_id:[a-z0-9]+}/sector/{sector_id:[a-z0-9]+}", system.DeleteSector).Methods(http.MethodDelete)
@@ -72,6 +69,7 @@ func main() {
 		Handler: router,
 	}
 	go func() {
+		logrus.Info("server started")
 		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
 			logrus.Fatalf("listen: %s\n", err)
 		}
