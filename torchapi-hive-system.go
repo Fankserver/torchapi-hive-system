@@ -24,7 +24,9 @@ var (
 func main() {
 	flag.Parse()
 
-	logrus.Println(http.ListenAndServe(":6060", nil))
+	go func() {
+		logrus.Println(http.ListenAndServe(":6060", nil))
+	}()
 
 	system, err := hive.NewSystem(*dbConnection)
 	if err != nil {
