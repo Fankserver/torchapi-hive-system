@@ -108,6 +108,11 @@ func (s *System) ProcessSectorEvent(hiveID bson.ObjectId, sectorID bson.ObjectId
 			if err != nil {
 				return
 			}
+			event.Raw = string(data)
+			data, err = json.Marshal(event)
+			if err != nil {
+				return
+			}
 			sectorEvents[v.SectorID] = data
 		}
 	case EventTypeFactionAutoAcceptChanged:
@@ -138,6 +143,11 @@ func (s *System) ProcessSectorEvent(hiveID bson.ObjectId, sectorID bson.ObjectId
 			factionAutoAcceptChange.FactionID = v.FactionID
 			var data []byte
 			data, err = json.Marshal(factionAutoAcceptChange)
+			if err != nil {
+				return
+			}
+			event.Raw = string(data)
+			data, err = json.Marshal(event)
 			if err != nil {
 				return
 			}
