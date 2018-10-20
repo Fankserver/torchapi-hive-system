@@ -159,16 +159,13 @@ func (c *Client) writePump() {
 			if err != nil {
 				return
 			}
-			w.Write(message)
 
-			// Add queued chat messages to the current websocket message.
-			n := len(c.send)
-			for i := 0; i < n; i++ {
-				w.Write(newline)
-				w.Write(<-c.send)
+			if _, err = w.Write(message); err != nil {
+				logrus.Errorln("Write failed", err)
+				return
 			}
 
-			if err := w.Close(); err != nil {
+			if err = w.Close(); err != nil {
 				return
 			}
 		case <-ticker.C:
