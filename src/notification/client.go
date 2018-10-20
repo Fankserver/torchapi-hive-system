@@ -1,6 +1,7 @@
 package notification
 
 import (
+	"bytes"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -89,6 +90,8 @@ func (c *Client) readPump() {
 					return
 				}
 
+				data = bytes.TrimSpace(bytes.Replace(data, newline, space, -1))
+
 				logrus.Info("broadcast")
 				for client := range c.hub.clients {
 					if client.hiveID != c.hiveID || client.sectorID == c.sectorID {
@@ -97,7 +100,12 @@ func (c *Client) readPump() {
 					}
 
 					logrus.Info("send client", c.hiveID.Hex(), c.sectorID.Hex())
-					client.send <- data
+					select {
+					case client.send <- data:
+					default:
+						close(client.send)
+						delete(c.hub.clients, client)
+					}
 					break
 				}
 			} else if sectorEvents != nil {
@@ -109,8 +117,15 @@ func (c *Client) readPump() {
 							continue
 						}
 
+						v = bytes.TrimSpace(bytes.Replace(v, newline, space, -1))
+
 						logrus.Info("send client", c.hiveID.Hex(), c.sectorID.Hex())
-						client.send <- v
+						select {
+						case client.send <- v:
+						default:
+							close(client.send)
+							delete(c.hub.clients, client)
+						}
 						break
 					}
 				}
