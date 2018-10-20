@@ -1,11 +1,12 @@
 package notification
 
 import (
-	"bytes"
+	"encoding/json"
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/fankserver/torchapi-hive-system/src/hive"
 	"github.com/globalsign/mgo/bson"
 	"github.com/gorilla/websocket"
 	"github.com/sirupsen/logrus"
@@ -63,9 +64,8 @@ func (c *Client) readPump() {
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		logrus.Info("read message")
-		i, message, err := c.conn.ReadMessage()
-		logrus.Infoln("received", i, string(message))
+		var event hive.EventSectorChange
+		err := c.conn.ReadJSON(&event)
 		if err != nil {
 			logrus.Errorln(err)
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
@@ -75,14 +75,18 @@ func (c *Client) readPump() {
 		}
 
 		go func() {
-			broadcast, sectorEvents, err := c.hub.system.ProcessSectorEvent(c.hiveID, c.sectorID, message)
+			broadcast, sectorEvents, err := c.hub.system.ProcessSectorEvent(c.hiveID, c.sectorID, event)
 			if err != nil {
 				logrus.Fatalln(err.Error())
 				return
 			}
 
 			if broadcast {
-				message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
+				data, err := json.Marshal(event)
+				if err != nil {
+					logrus.Errorln(err.Error())
+					return
+				}
 
 				logrus.Info("broadcast")
 				for client := range c.hub.clients {
@@ -92,7 +96,7 @@ func (c *Client) readPump() {
 					}
 
 					logrus.Info("send client", c.hiveID.Hex(), c.sectorID.Hex())
-					client.send <- message
+					client.send <- data
 					break
 				}
 			} else if sectorEvents != nil {
