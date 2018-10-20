@@ -64,7 +64,8 @@ func (c *Client) readPump() {
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
 		logrus.Info("read message")
-		_, message, err := c.conn.ReadMessage()
+		i, message, err := c.conn.ReadMessage()
+		logrus.Infoln("received", i, string(message))
 		if err != nil {
 			logrus.Errorln(err)
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
