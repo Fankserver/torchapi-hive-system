@@ -35,9 +35,15 @@ type EventSectorChange struct {
 	Raw  string `json:"raw"`
 }
 
-func (s *System) ProcessSectorEvent(hiveHex string, sectorHex string, event EventSectorChange) (broadcast bool, sectorEvents map[string][]byte, err error) {
+func (s *System) ProcessSectorEvent(hiveHex string, sectorHex string, message []byte) (broadcast bool, sectorEvents map[string][]byte, err error) {
 	hiveID := bson.ObjectIdHex(hiveHex)
 	sectorID := bson.ObjectIdHex(sectorHex)
+	var event EventSectorChange
+	err = json.Unmarshal(message, &event)
+	if err != nil {
+		return
+	}
+
 	logrus.Info(event.Type)
 	logrus.Info(event.Raw)
 

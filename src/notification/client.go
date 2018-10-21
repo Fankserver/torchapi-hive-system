@@ -2,12 +2,10 @@ package notification
 
 import (
 	"bytes"
-	"encoding/json"
 	"log"
 	"net/http"
 	"time"
 
-	"github.com/fankserver/torchapi-hive-system/src/hive"
 	"github.com/sirupsen/logrus"
 
 	"github.com/gorilla/websocket"
@@ -65,8 +63,7 @@ func (c *Client) readPump() {
 	c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		var event hive.EventSectorChange
-		err := c.conn.ReadJSON(&event)
+		_, message, err := c.conn.ReadMessage()
 		if err != nil {
 			logrus.Errorln(err)
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
@@ -74,55 +71,13 @@ func (c *Client) readPump() {
 			}
 			break
 		}
-		go func() {
-			broadcast, sectorEvents, err := c.hub.system.ProcessSectorEvent(c.hiveID, c.sectorID, event)
-			if err != nil {
-				logrus.Fatalln(err.Error())
-				return
-			}
-			if broadcast {
-				data, err := json.Marshal(event)
-				if err != nil {
-					logrus.Errorln(err.Error())
-					return
-				}
-				data = bytes.TrimSpace(bytes.Replace(data, newline, space, -1))
-				logrus.Info("broadcast")
-				for client := range c.hub.clients {
-					if client.hiveID != c.hiveID || client.sectorID == c.sectorID {
-						logrus.Infoln("skip client", c.hiveID, c.sectorID)
-						continue
-					}
-					logrus.Infoln("send client", c.hiveID, c.sectorID)
-					select {
-					case client.send <- data:
-					default:
-						close(client.send)
-						delete(c.hub.clients, client)
-					}
-					break
-				}
-			} else if sectorEvents != nil {
-				logrus.Info("select events")
-				for k, v := range sectorEvents {
-					for client := range c.hub.clients {
-						if client.hiveID != c.hiveID || client.sectorID != k {
-							logrus.Infoln("skip client", c.hiveID, c.sectorID)
-							continue
-						}
-						v = bytes.TrimSpace(bytes.Replace(v, newline, space, -1))
-						logrus.Infoln("send client", c.hiveID, c.sectorID)
-						select {
-						case client.send <- v:
-						default:
-							close(client.send)
-							delete(c.hub.clients, client)
-						}
-						break
-					}
-				}
-			}
-		}()
+
+		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
+		c.hub.event <- &event{
+			hiveHex:   c.hiveID,
+			sectorHex: c.sectorID,
+			message:   message,
+		}
 	}
 }
 
