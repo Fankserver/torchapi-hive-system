@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/globalsign/mgo/bson"
 	"github.com/gorilla/websocket"
 )
 
@@ -20,7 +21,7 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 
 	// Maximum message size allowed from peer.
-	maxMessageSize = 512
+	maxMessageSize = 1024 * 1024
 )
 
 var (
@@ -29,8 +30,9 @@ var (
 )
 
 var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
+	ReadBufferSize:  maxMessageSize,
+	WriteBufferSize: maxMessageSize,
+	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
 // Client is a middleman between the websocket connection and the hub.
@@ -42,6 +44,9 @@ type Client struct {
 
 	// Buffered channel of outbound messages.
 	send chan []byte
+
+	hiveID   bson.ObjectId
+	sectorID bson.ObjectId
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -66,7 +71,6 @@ func (c *Client) readPump() {
 			break
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
-		c.hub.broadcast <- message
 	}
 }
 
@@ -110,13 +114,19 @@ func (c *Client) writePump() {
 }
 
 // serveWs handles websocket requests from the peer.
-func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
+func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request, hiveID bson.ObjectId, sectorID bson.ObjectId) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256)}
+	client := &Client{
+		hub:      hub,
+		conn:     conn,
+		send:     make(chan []byte, 256),
+		hiveID:   hiveID,
+		sectorID: sectorID,
+	}
 	client.hub.register <- client
 
 	// Allow collection of memory referenced by the caller by doing all work in
