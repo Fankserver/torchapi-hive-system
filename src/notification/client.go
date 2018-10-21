@@ -156,11 +156,13 @@ func (c *Client) writePump() {
 			if !ok {
 				// The hub closed the channel.
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				logrus.Errorln("CloseMessage")
 				return
 			}
 
 			w, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
+				logrus.Errorln("NextWriter failed", err)
 				return
 			}
 
@@ -170,12 +172,14 @@ func (c *Client) writePump() {
 			}
 
 			if err = w.Close(); err != nil {
+				logrus.Errorln("Close failed", err)
 				return
 			}
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			logrus.Infoln("send ping")
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				logrus.Errorln("PingMessage failed", err)
 				return
 			}
 		}
