@@ -8,6 +8,7 @@ import (
 
 	"github.com/globalsign/mgo/bson"
 	"github.com/gorilla/websocket"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -71,6 +72,20 @@ func (c *Client) readPump() {
 			break
 		}
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
+		for client := range c.hub.clients {
+			if client.hiveID != c.hiveID || client.sectorID == c.sectorID {
+				logrus.Info("skip client", c.hiveID.Hex(), c.sectorID.Hex())
+				continue
+			}
+			logrus.Info("send client", c.hiveID.Hex(), c.sectorID.Hex())
+			select {
+			case client.send <- message:
+			default:
+				close(client.send)
+				delete(c.hub.clients, client)
+			}
+			break
+		}
 	}
 }
 
