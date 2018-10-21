@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/globalsign/mgo/bson"
 	"github.com/gorilla/websocket"
 )
 
@@ -44,8 +43,8 @@ type Client struct {
 	// Buffered channel of outbound messages.
 	send chan []byte
 
-	hiveID   bson.ObjectId
-	sectorID bson.ObjectId
+	hiveID   string
+	sectorID string
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -114,7 +113,7 @@ func (c *Client) writePump() {
 }
 
 // serveWs handles websocket requests from the peer.
-func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request, hiveID bson.ObjectId, sectorID bson.ObjectId) {
+func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request, hiveID string, sectorID string) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
