@@ -2,7 +2,6 @@ package notification
 
 import (
 	"bytes"
-	"encoding/json"
 
 	"github.com/sirupsen/logrus"
 )
@@ -69,15 +68,10 @@ func (h *Hub) Run() {
 			broadcast, sectorEvents, err := h.eventHandler(event.hiveHex, event.sectorHex, event.message)
 			if err != nil {
 				logrus.Errorln(err)
+				continue
 			}
 
 			if broadcast {
-				data, err := json.Marshal(event)
-				if err != nil {
-					logrus.Errorln(err.Error())
-					return
-				}
-				data = bytes.TrimSpace(bytes.Replace(data, newline, space, -1))
 				logrus.Info("broadcast")
 				for client := range h.clients {
 					if client.hiveID != event.hiveHex || client.sectorID == event.sectorHex {
@@ -86,7 +80,7 @@ func (h *Hub) Run() {
 					}
 					logrus.Infoln("send client", client.hiveID, client.sectorID)
 					select {
-					case client.send <- data:
+					case client.send <- event.message:
 					default:
 						close(client.send)
 						delete(h.clients, client)

@@ -73,6 +73,7 @@ func (c *Client) readPump() {
 		}
 
 		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
+		c.send <- message
 		c.hub.event <- &event{
 			hiveHex:   c.hiveID,
 			sectorHex: c.sectorID,
