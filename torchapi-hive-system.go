@@ -60,7 +60,7 @@ func main() {
 			return
 		}
 
-		notification.ServeWs(hub, w, r, string(hiveID), string(sectorID))
+		notification.ServeWs(hub, w, r, hiveID.Hex(), sectorID.Hex())
 	})
 	router.HandleFunc("/api/hive", system.GetHives).Methods(http.MethodGet)
 	router.HandleFunc("/api/hive", system.CreateHive).Methods(http.MethodPost)

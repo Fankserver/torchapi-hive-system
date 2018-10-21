@@ -35,7 +35,9 @@ type EventSectorChange struct {
 	Raw  string `json:"raw"`
 }
 
-func (s *System) ProcessSectorEvent(hiveID bson.ObjectId, sectorID bson.ObjectId, event EventSectorChange) (broadcast bool, sectorEvents map[bson.ObjectId][]byte, err error) {
+func (s *System) ProcessSectorEvent(hiveHex string, sectorHex string, event EventSectorChange) (broadcast bool, sectorEvents map[string][]byte, err error) {
+	hiveID := bson.ObjectIdHex(hiveHex)
+	sectorID := bson.ObjectIdHex(sectorHex)
 	logrus.Info(event.Type)
 	logrus.Info(event.Raw)
 
@@ -89,7 +91,7 @@ func (s *System) ProcessSectorEvent(hiveID bson.ObjectId, sectorID bson.ObjectId
 			return
 		}
 
-		sectorEvents = make(map[bson.ObjectId][]byte)
+		sectorEvents = make(map[string][]byte)
 
 		var faction *Faction
 		faction, err = s.GetFaction(hiveID, sectorID, factionEdited.FactionID)
@@ -113,7 +115,7 @@ func (s *System) ProcessSectorEvent(hiveID bson.ObjectId, sectorID bson.ObjectId
 			if err != nil {
 				return
 			}
-			sectorEvents[v.SectorID] = data
+			sectorEvents[v.SectorID.Hex()] = data
 		}
 	case EventTypeFactionAutoAcceptChanged:
 		var factionAutoAcceptChange EventFactionAutoAcceptChangeEvent
@@ -127,7 +129,7 @@ func (s *System) ProcessSectorEvent(hiveID bson.ObjectId, sectorID bson.ObjectId
 			return
 		}
 
-		sectorEvents = make(map[bson.ObjectId][]byte)
+		sectorEvents = make(map[string][]byte)
 
 		var faction *Faction
 		faction, err = s.GetFaction(hiveID, sectorID, factionAutoAcceptChange.FactionID)
@@ -151,7 +153,7 @@ func (s *System) ProcessSectorEvent(hiveID bson.ObjectId, sectorID bson.ObjectId
 			if err != nil {
 				return
 			}
-			sectorEvents[v.SectorID] = data
+			sectorEvents[v.SectorID.Hex()] = data
 		}
 	default:
 		logrus.Warnln("received unknown event type", event.Type)
