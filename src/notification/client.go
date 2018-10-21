@@ -24,7 +24,7 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 
 	// Maximum message size allowed from peer.
-	maxMessageSize = 512
+	maxMessageSize = 1024 * 1024
 )
 
 var (
@@ -33,8 +33,8 @@ var (
 )
 
 var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
+	ReadBufferSize:  maxMessageSize,
+	WriteBufferSize: maxMessageSize,
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
@@ -63,10 +63,10 @@ func (c *Client) readPump() {
 		c.conn.Close()
 	}()
 	c.conn.SetReadLimit(maxMessageSize)
-	c.conn.SetReadDeadline(time.Now().Add(pongWait))
+	//c.conn.SetReadDeadline(time.Now().Add(pongWait))
 	c.conn.SetPongHandler(func(string) error {
 		logrus.Infoln("got pong")
-		c.conn.SetReadDeadline(time.Now().Add(pongWait))
+		//c.conn.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
 	for {
