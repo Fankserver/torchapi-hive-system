@@ -32,7 +32,7 @@ func main() {
 	if err != nil {
 		logrus.Fatalln(err.Error())
 	}
-	hub := notification.NewHub()
+	hub := notification.NewHub(system)
 	go hub.Run()
 
 	// subscribe to SIGINT signals
