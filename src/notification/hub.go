@@ -11,9 +11,6 @@ type Hub struct {
 	// Registered clients.
 	clients map[*Client]bool
 
-	// Inbound messages from the clients.
-	broadcast chan []byte
-
 	// Register requests from the clients.
 	register chan *Client
 
@@ -25,7 +22,6 @@ type Hub struct {
 
 func NewHub(system *hive.System) *Hub {
 	return &Hub{
-		broadcast:  make(chan []byte),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
 		clients:    make(map[*Client]bool),
@@ -52,15 +48,6 @@ func (h *Hub) Run() {
 			err := h.system.UpdateSectorState(client.hiveID, client.sectorID, hive.SectorStateOffline)
 			if err != nil {
 				logrus.Errorln(err)
-			}
-		case message := <-h.broadcast:
-			for client := range h.clients {
-				select {
-				case client.send <- message:
-				default:
-					close(client.send)
-					delete(h.clients, client)
-				}
 			}
 		}
 	}
