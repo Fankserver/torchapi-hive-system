@@ -32,7 +32,7 @@ func main() {
 	if err != nil {
 		logrus.Fatalln(err.Error())
 	}
-	hub := notification.NewHub(system)
+	hub := notification.NewHub()
 	go hub.Run()
 
 	// subscribe to SIGINT signals
@@ -60,7 +60,7 @@ func main() {
 			return
 		}
 
-		notification.ServeWs(hub, w, r, hiveID, sectorID)
+		notification.ServeWs(hub, w, r)
 	})
 	router.HandleFunc("/api/hive", system.GetHives).Methods(http.MethodGet)
 	router.HandleFunc("/api/hive", system.CreateHive).Methods(http.MethodPost)

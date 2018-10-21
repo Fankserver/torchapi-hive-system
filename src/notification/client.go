@@ -2,15 +2,11 @@ package notification
 
 import (
 	"bytes"
-	"encoding/json"
 	"log"
 	"net/http"
 	"time"
 
-	"github.com/fankserver/torchapi-hive-system/src/hive"
-	"github.com/globalsign/mgo/bson"
 	"github.com/gorilla/websocket"
-	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -24,7 +20,7 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 
 	// Maximum message size allowed from peer.
-	maxMessageSize = 1024 * 1024
+	maxMessageSize = 512
 )
 
 var (
@@ -33,17 +29,13 @@ var (
 )
 
 var upgrader = websocket.Upgrader{
-	ReadBufferSize:  maxMessageSize,
-	WriteBufferSize: maxMessageSize,
-	CheckOrigin:     func(r *http.Request) bool { return true },
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
 }
 
 // Client is a middleman between the websocket connection and the hub.
 type Client struct {
 	hub *Hub
-
-	hiveID   bson.ObjectId
-	sectorID bson.ObjectId
 
 	// The websocket connection.
 	conn *websocket.Conn
@@ -63,78 +55,18 @@ func (c *Client) readPump() {
 		c.conn.Close()
 	}()
 	c.conn.SetReadLimit(maxMessageSize)
-	//c.conn.SetReadDeadline(time.Now().Add(pongWait))
-	c.conn.SetPongHandler(func(string) error {
-		logrus.Infoln("got pong")
-		//c.conn.SetReadDeadline(time.Now().Add(pongWait))
-		return nil
-	})
+	c.conn.SetReadDeadline(time.Now().Add(pongWait))
+	c.conn.SetPongHandler(func(string) error { c.conn.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
-		var event hive.EventSectorChange
-		err := c.conn.ReadJSON(&event)
+		_, message, err := c.conn.ReadMessage()
 		if err != nil {
-			logrus.Errorln(err)
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("error: %v", err)
 			}
 			break
 		}
-
-		go func() {
-			broadcast, sectorEvents, err := c.hub.system.ProcessSectorEvent(c.hiveID, c.sectorID, event)
-			if err != nil {
-				logrus.Fatalln(err.Error())
-				return
-			}
-
-			if broadcast {
-				data, err := json.Marshal(event)
-				if err != nil {
-					logrus.Errorln(err.Error())
-					return
-				}
-
-				data = bytes.TrimSpace(bytes.Replace(data, newline, space, -1))
-
-				logrus.Info("broadcast")
-				for client := range c.hub.clients {
-					if client.hiveID != c.hiveID || client.sectorID == c.sectorID {
-						logrus.Info("skip client", c.hiveID.Hex(), c.sectorID.Hex())
-						continue
-					}
-
-					logrus.Info("send client", c.hiveID.Hex(), c.sectorID.Hex())
-					select {
-					case client.send <- data:
-					default:
-						close(client.send)
-						delete(c.hub.clients, client)
-					}
-					break
-				}
-			} else if sectorEvents != nil {
-				logrus.Info("select events")
-				for k, v := range sectorEvents {
-					for client := range c.hub.clients {
-						if client.hiveID != c.hiveID || client.sectorID != k {
-							logrus.Info("skip client", c.hiveID.Hex(), c.sectorID.Hex())
-							continue
-						}
-
-						v = bytes.TrimSpace(bytes.Replace(v, newline, space, -1))
-
-						logrus.Info("send client", c.hiveID.Hex(), c.sectorID.Hex())
-						select {
-						case client.send <- v:
-						default:
-							close(client.send)
-							delete(c.hub.clients, client)
-						}
-						break
-					}
-				}
-			}
-		}()
+		message = bytes.TrimSpace(bytes.Replace(message, newline, space, -1))
+		c.hub.broadcast <- message
 	}
 }
 
@@ -156,30 +88,21 @@ func (c *Client) writePump() {
 			if !ok {
 				// The hub closed the channel.
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
-				logrus.Errorln("CloseMessage")
 				return
 			}
 
 			w, err := c.conn.NextWriter(websocket.TextMessage)
 			if err != nil {
-				logrus.Errorln("NextWriter failed", err)
 				return
 			}
+			w.Write(message)
 
-			if _, err = w.Write(message); err != nil {
-				logrus.Errorln("Write failed", err)
-				return
-			}
-
-			if err = w.Close(); err != nil {
-				logrus.Errorln("Close failed", err)
+			if err := w.Close(); err != nil {
 				return
 			}
 		case <-ticker.C:
 			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-			logrus.Infoln("send ping")
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				logrus.Errorln("PingMessage failed", err)
 				return
 			}
 		}
@@ -187,19 +110,13 @@ func (c *Client) writePump() {
 }
 
 // serveWs handles websocket requests from the peer.
-func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request, hiveID bson.ObjectId, sectorID bson.ObjectId) {
+func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	client := &Client{
-		hub:      hub,
-		hiveID:   hiveID,
-		sectorID: sectorID,
-		conn:     conn,
-		send:     make(chan []byte, 256),
-	}
+	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256)}
 	client.hub.register <- client
 
 	// Allow collection of memory referenced by the caller by doing all work in
