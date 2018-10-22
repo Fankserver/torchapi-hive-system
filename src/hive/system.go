@@ -110,7 +110,7 @@ func (s *System) ProcessSectorEvent(hiveHex string, sectorHex string, message []
 				continue
 			}
 
-			factionEdited.FactionID = v.FactionID
+			factionEdited.FactionID = v.EntityID
 			var data []byte
 			data, err = json.Marshal(factionEdited)
 			if err != nil {
@@ -148,9 +148,277 @@ func (s *System) ProcessSectorEvent(hiveHex string, sectorHex string, message []
 				continue
 			}
 
-			factionAutoAcceptChange.FactionID = v.FactionID
+			factionAutoAcceptChange.FactionID = v.EntityID
 			var data []byte
 			data, err = json.Marshal(factionAutoAcceptChange)
+			if err != nil {
+				return
+			}
+			event.Raw = string(data)
+			data, err = json.Marshal(event)
+			if err != nil {
+				return
+			}
+			sectorEvents[v.SectorID.Hex()] = data
+		}
+	case EventTypeFactionMemberSendJoin:
+		var factionMember EventFactionMember
+		err = json.Unmarshal([]byte(event.Raw), &factionMember)
+		if err != nil {
+			return
+		}
+
+		var faction *Faction
+		faction, err := s.MemberSendJoin(hiveID, sectorID, factionMember)
+		if err != nil {
+			return
+		}
+
+		for _, v := range faction.Sectors {
+			// ignore own sector
+			if v.SectorID == sectorID {
+				continue
+			}
+
+			factionMember.FactionID = v.EntityID
+			var data []byte
+			data, err = json.Marshal(factionMember)
+			if err != nil {
+				return
+			}
+			event.Raw = string(data)
+			data, err = json.Marshal(event)
+			if err != nil {
+				return
+			}
+			sectorEvents[v.SectorID.Hex()] = data
+		}
+	case EventTypeFactionMemberCancelJoin:
+		var factionMember EventFactionMember
+		err = json.Unmarshal([]byte(event.Raw), &factionMember)
+		if err != nil {
+			return
+		}
+
+		var faction *Faction
+		faction, err := s.MemberCancelJoin(hiveID, sectorID, factionMember)
+		if err != nil {
+			return
+		}
+
+		for _, v := range faction.Sectors {
+			// ignore own sector
+			if v.SectorID == sectorID {
+				continue
+			}
+
+			factionMember.FactionID = v.EntityID
+			var data []byte
+			data, err = json.Marshal(factionMember)
+			if err != nil {
+				return
+			}
+			event.Raw = string(data)
+			data, err = json.Marshal(event)
+			if err != nil {
+				return
+			}
+			sectorEvents[v.SectorID.Hex()] = data
+		}
+	case EventTypeFactionMemberAcceptJoin:
+		var factionMember EventFactionMember
+		err = json.Unmarshal([]byte(event.Raw), &factionMember)
+		if err != nil {
+			return
+		}
+
+		var faction *Faction
+		faction, err := s.MemberAcceptJoin(hiveID, sectorID, factionMember)
+		if err != nil {
+			return
+		}
+
+		for _, v := range faction.Sectors {
+			// ignore own sector
+			if v.SectorID == sectorID {
+				continue
+			}
+
+			factionMember.FactionID = v.EntityID
+			var data []byte
+			data, err = json.Marshal(factionMember)
+			if err != nil {
+				return
+			}
+			event.Raw = string(data)
+			data, err = json.Marshal(event)
+			if err != nil {
+				return
+			}
+			sectorEvents[v.SectorID.Hex()] = data
+		}
+	case EventTypeFactionMemberPromote:
+	case EventTypeFactionMemberDemote:
+	case EventTypeFactionMemberKick:
+	case EventTypeFactionMemberLeave:
+	case EventTypeFactionSendPeaceRequest:
+		var factionPeaceWar EventFactionPeaceWar
+		err = json.Unmarshal([]byte(event.Raw), &factionPeaceWar)
+		if err != nil {
+			return
+		}
+
+		var fromFaction *Faction
+		var toFaction *Faction
+		fromFaction, toFaction, err = s.SendPeaceRequest(hiveID, sectorID, factionPeaceWar)
+		if err != nil {
+			return
+		}
+		for _, v := range fromFaction.Sectors {
+			// ignore own sector
+			if v.SectorID == sectorID {
+				continue
+			}
+
+			// get to faction entity id
+			for _, vv := range toFaction.Sectors {
+				if vv.SectorID != v.SectorID {
+					continue
+				}
+
+				factionPeaceWar.ToFactionID = vv.EntityID
+				break
+			}
+
+			factionPeaceWar.FromFactionID = v.EntityID
+			var data []byte
+			data, err = json.Marshal(factionPeaceWar)
+			if err != nil {
+				return
+			}
+			event.Raw = string(data)
+			data, err = json.Marshal(event)
+			if err != nil {
+				return
+			}
+			sectorEvents[v.SectorID.Hex()] = data
+		}
+	case EventTypeFactionCancelPeaceRequest:
+		var factionPeaceWar EventFactionPeaceWar
+		err = json.Unmarshal([]byte(event.Raw), &factionPeaceWar)
+		if err != nil {
+			return
+		}
+
+		var fromFaction *Faction
+		var toFaction *Faction
+		fromFaction, toFaction, err = s.CancelPeaceRequest(hiveID, sectorID, factionPeaceWar)
+		if err != nil {
+			return
+		}
+		for _, v := range fromFaction.Sectors {
+			// ignore own sector
+			if v.SectorID == sectorID {
+				continue
+			}
+
+			// get to faction entity id
+			for _, vv := range toFaction.Sectors {
+				if vv.SectorID != v.SectorID {
+					continue
+				}
+
+				factionPeaceWar.ToFactionID = vv.EntityID
+				break
+			}
+
+			factionPeaceWar.FromFactionID = v.EntityID
+			var data []byte
+			data, err = json.Marshal(factionPeaceWar)
+			if err != nil {
+				return
+			}
+			event.Raw = string(data)
+			data, err = json.Marshal(event)
+			if err != nil {
+				return
+			}
+			sectorEvents[v.SectorID.Hex()] = data
+		}
+	case EventTypeFactionAcceptPeace:
+		var factionPeaceWar EventFactionPeaceWar
+		err = json.Unmarshal([]byte(event.Raw), &factionPeaceWar)
+		if err != nil {
+			return
+		}
+
+		var fromFaction *Faction
+		var toFaction *Faction
+		fromFaction, toFaction, err = s.AcceptPeace(hiveID, sectorID, factionPeaceWar)
+		if err != nil {
+			return
+		}
+		for _, v := range fromFaction.Sectors {
+			// ignore own sector
+			if v.SectorID == sectorID {
+				continue
+			}
+
+			// get to faction entity id
+			for _, vv := range toFaction.Sectors {
+				if vv.SectorID != v.SectorID {
+					continue
+				}
+
+				factionPeaceWar.ToFactionID = vv.EntityID
+				break
+			}
+
+			factionPeaceWar.FromFactionID = v.EntityID
+			var data []byte
+			data, err = json.Marshal(factionPeaceWar)
+			if err != nil {
+				return
+			}
+			event.Raw = string(data)
+			data, err = json.Marshal(event)
+			if err != nil {
+				return
+			}
+			sectorEvents[v.SectorID.Hex()] = data
+		}
+	case EventTypeFactionDeclareWar:
+		var factionPeaceWar EventFactionPeaceWar
+		err = json.Unmarshal([]byte(event.Raw), &factionPeaceWar)
+		if err != nil {
+			return
+		}
+
+		var fromFaction *Faction
+		var toFaction *Faction
+		fromFaction, toFaction, err = s.DeclareWar(hiveID, sectorID, factionPeaceWar)
+		if err != nil {
+			return
+		}
+		for _, v := range fromFaction.Sectors {
+			// ignore own sector
+			if v.SectorID == sectorID {
+				continue
+			}
+
+			// get to faction entity id
+			for _, vv := range toFaction.Sectors {
+				if vv.SectorID != v.SectorID {
+					continue
+				}
+
+				factionPeaceWar.ToFactionID = vv.EntityID
+				break
+			}
+
+			factionPeaceWar.FromFactionID = v.EntityID
+			var data []byte
+			data, err = json.Marshal(factionPeaceWar)
 			if err != nil {
 				return
 			}
