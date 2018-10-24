@@ -67,6 +67,7 @@ func main() {
 	router.HandleFunc("/api/hive", system.GetHives).Methods(http.MethodGet)
 	router.HandleFunc("/api/hive", system.CreateHive).Methods(http.MethodPost)
 	router.HandleFunc("/api/hive/{hive_id:[a-z0-9]+}/faction", system.GetFactions).Methods(http.MethodGet)
+	router.HandleFunc("/api/hive/{hive_id:[a-z0-9]+}/faction", system.DeleteFactions).Methods(http.MethodDelete)
 	router.HandleFunc("/api/hive/{hive_id:[a-z0-9]+}/sector", system.GetSectors).Methods(http.MethodGet)
 	router.HandleFunc("/api/hive/{hive_id:[a-z0-9]+}/sector", system.CreateSector).Methods(http.MethodPost)
 	router.HandleFunc("/api/hive/{hive_id:[a-z0-9]+}/sector/{sector_id:[a-z0-9]+}", system.DeleteSector).Methods(http.MethodDelete)

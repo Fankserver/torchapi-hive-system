@@ -82,6 +82,21 @@ func (s *System) GetFactions(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (s *System) DeleteFactions(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	conn := s.db.Copy()
+	defer conn.Close()
+
+	_, err := conn.DB("torchhive").C(CollectionFaction).RemoveAll(bson.M{
+		"hive_id": bson.ObjectIdHex(vars["hive_id"]),
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
 func (s *System) CreateFaction(hiveID bson.ObjectId, sectorID bson.ObjectId, event EventFactionCreated) error {
 	conn := s.db.Copy()
 	defer conn.Close()
