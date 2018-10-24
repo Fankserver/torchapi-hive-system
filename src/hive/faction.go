@@ -441,7 +441,7 @@ func (s *System) MemberSendJoin(hiveID bson.ObjectId, sectorID bson.ObjectId, ev
 	return faction, nil
 }
 
-func (s *System) MemberCancelJoin(hiveID bson.ObjectId, sectorID bson.ObjectId, event EventFactionMember) (*Faction, error) {
+func (s *System) MemberLeave(hiveID bson.ObjectId, sectorID bson.ObjectId, event EventFactionMember) (*Faction, error) {
 	faction, err := s.getFaction(hiveID, sectorID, event.FactionID)
 	if err != nil {
 		return nil, err
@@ -455,7 +455,7 @@ func (s *System) MemberCancelJoin(hiveID bson.ObjectId, sectorID bson.ObjectId, 
 	}
 
 	if !found {
-		return nil, fmt.Errorf("steam id %d want to cancel join in faction %s but not exists", event.PlayerSteamID, faction.ID.Hex())
+		return nil, fmt.Errorf("steam id %d want to leave in faction %s but not exists", event.PlayerSteamID, faction.ID.Hex())
 	}
 
 	conn := s.db.Copy()
@@ -508,6 +508,44 @@ func (s *System) MemberAcceptJoin(hiveID bson.ObjectId, sectorID bson.ObjectId, 
 		bson.M{
 			"$set": bson.M{
 				"members.$.steam_id": FactionMemberJoined,
+			},
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return faction, nil
+}
+
+func (s *System) MemberPromoteDemote(hiveID bson.ObjectId, sectorID bson.ObjectId, event EventFactionMember, promote bool) (*Faction, error) {
+	faction, err := s.getFaction(hiveID, sectorID, event.FactionID)
+	if err != nil {
+		return nil, err
+	}
+
+	found := false
+	for _, v := range faction.Members {
+		if v.SteamID == event.PlayerSteamID {
+			found = true
+		}
+	}
+
+	if !found {
+		return nil, fmt.Errorf("steam id %d want to accept join in faction %s but not exists", event.PlayerSteamID, faction.ID.Hex())
+	}
+
+	conn := s.db.Copy()
+	defer conn.Close()
+
+	err = conn.DB("torchhive").C(CollectionFaction).Update(
+		bson.M{
+			"_id":              faction.ID,
+			"members.steam_id": event.PlayerSteamID,
+		},
+		bson.M{
+			"$set": bson.M{
+				"members.$.is_leader": promote,
 			},
 		},
 	)
